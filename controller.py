@@ -9,7 +9,6 @@ class ReversiController:
         初期化
         """
         self.__model = ReversiModel()
-        self.__turn = ReversiStone.BLACK
 
 
     def put(self, x: int, y: int):
@@ -18,11 +17,8 @@ class ReversiController:
         """
         x += 1
         y += 1
-        if self.__model.put(10 * y + x, self.__turn):
-            if self.__turn == ReversiStone.BLACK:
-                self.__turn = ReversiStone.WHITE
-            else:
-                self.__turn = ReversiStone.BLACK
+        is_put = self.__model.put(10 * y + x)
+        return is_put
                 
 
     @property
@@ -38,9 +34,9 @@ class ReversiController:
 
     @property
     def turn(self) -> ReversiStone:
-        return self.__turn
+        return self.__model.turn
     
 
     @property
     def turn_str(self) -> str:
-        return self.__turn.name
+        return self.__model.turn.name

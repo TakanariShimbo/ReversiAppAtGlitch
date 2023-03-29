@@ -11,7 +11,7 @@
         height: calc(100vh / 9);
     }
     
-    .black-disc, .white-disc {
+    .black-disc, .white-disc, .candidate-disc {
         width: calc(100vh / 11);
         height: calc(100vh / 11);
     }
@@ -25,7 +25,7 @@
         height: calc(100vw / 9);
     }
     
-    .black-disc, .white-disc {
+    .black-disc, .white-disc, .candidate-disc {
         width: calc(100vw / 11);
         height: calc(100vw / 11);
     }
@@ -52,12 +52,13 @@
     background-color: #00aa00;
 }
 
-.black-disc, .white-disc {
+.black-disc, .white-disc, .candidate-disc {
     border-radius: 50%;
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    pointer-events: none;
 }
 
 .black-disc {
@@ -66,6 +67,10 @@
 
 .white-disc {
     background-color: #fff;
+}
+
+.candidate-disc {
+    background-color: #00aa00;
 }
 
 

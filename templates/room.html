@@ -12,11 +12,13 @@
     <tr>
         {% for j, cell in enumerate(row) %}
             <td data-x="{{ i }}" data-y="{{ j }}">
-            {% if cell == "BLACK" %}
-                <div class="black-disc"></div>
-            {% elif cell == "WHITE" %}
-                <div class="white-disc"></div>
-            {% endif %}
+                {% if cell == "BLACK" %}
+                    <div class="black-disc"></div>
+                {% elif cell == "WHITE" %}
+                    <div class="white-disc"></div>
+                {% elif cell == "CANDIDATE" %}
+                    <div class="candidate-disc"></div>
+                {% endif %}
             </td>
         {% endfor %}
     </tr>
@@ -36,7 +38,7 @@
         var x = event.target.getAttribute('data-x');
         var y = event.target.getAttribute('data-y');
         socket.emit('put', {x: x, y: y});
-    }
+    };
     });
 
     socket.on('update_board', function (data) {
@@ -44,18 +46,22 @@
     for (var i = 0; i < 8; i++) {
         for (var j = 0; j < 8; j++) {
             var cell = document.querySelector('td[data-x="' + i + '"][data-y="' + j + '"]');
-            var disc = cell.querySelector('.black-disc, .white-disc');
+            var disc = cell.querySelector('.black-disc, .white-disc, .candidate-disc');
             if (disc) {
-            cell.removeChild(disc);
+                cell.removeChild(disc);
             }
             if (board[i][j] == "BLACK") {
-            var newDisc = document.createElement('div');
-            newDisc.className = 'black-disc';
-            cell.appendChild(newDisc);
+                var newDisc = document.createElement('div');
+                newDisc.className = 'black-disc';
+                cell.appendChild(newDisc);
             } else if (board[i][j] == "WHITE") {
-            var newDisc = document.createElement('div');
-            newDisc.className = 'white-disc';
-            cell.appendChild(newDisc);
+                var newDisc = document.createElement('div');
+                newDisc.className = 'white-disc';
+                cell.appendChild(newDisc);
+            } else if (board[i][j] == "CANDIDATE") {
+                var newDisc = document.createElement('div');
+                newDisc.className = 'candidate-disc';
+                cell.appendChild(newDisc);
             }
         }
     }

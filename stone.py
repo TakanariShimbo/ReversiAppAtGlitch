@@ -6,3 +6,4 @@ class ReversiStone(Enum):
     BLACK = auto()  # 黒
     WHITE = auto()  # 白
     WALL  = auto()  # 壁
+    CANDIDATE = auto() # 候補

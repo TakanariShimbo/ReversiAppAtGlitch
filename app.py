@@ -109,8 +109,8 @@ def put(message):
     # Update board
     x = int(message['x'])
     y = int(message['y'])
-    room.controller.put(x, y)
-    emit('update_board', {'board': room.controller.board_str, 'turn': room.controller.turn_str}, room=room.room_name)
+    if room.controller.put(x, y):
+        emit('update_board', {'board': room.controller.board_str, 'turn': room.controller.turn_str}, room=room.room_name)
 
 
 if __name__ == '__main__':
