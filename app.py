@@ -27,12 +27,13 @@ def create():
         return render_template('create.html', rooms=room_user_manager.room_name_list)
 
     # POST
+    # Early return
     room_name = request.form['room_name']
-    if room_user_manager.can_create_room(room_name):
-        room_user_manager.create_room(room_name)
-        return redirect(url_for('room', room_name=room_name))
-    else:
+    if not room_user_manager.can_create_room(room_name):
         return "この部屋名は既に使用されています。", 400
+    
+    room_user_manager.create_room(room_name)
+    return redirect(url_for('room', room_name=room_name))    
     
 @app.route('/enter', methods=['GET', 'POST'])
 def enter():
@@ -41,18 +42,17 @@ def enter():
         return render_template('enter.html', rooms=room_user_manager.room_name_list)
     
     # POST
+    # Early return
     room_name = request.form['room_name']
-    if room_user_manager.can_enter_room(room_name):
-        return redirect(url_for('room', room_name=room_name))
-    else:
+    if not room_user_manager.can_enter_room(room_name):
         return "この部屋は存在しません。", 400
+    
+    return redirect(url_for('room', room_name=room_name))    
     
 @app.route('/room/<room_name>')
 def room(room_name):
-
-    room = room_user_manager.get_room(room_name)
-    
     # Early return
+    room = room_user_manager.get_room(room_name)
     if room.is_full():
         abort(403, "This room is full. Please try again later.")
 
@@ -60,7 +60,6 @@ def room(room_name):
     if room.is_empty():
         player_color = ReversiStone.BLACK
     else:
-        print("called")
         stone_kind = room.get_empty_stone_kind()
         player_color = stone_kind
     return render_template('room.html', room_name=room_name, your_color=player_color.name, board=room.controller.board_str, enumerate=enumerate)
@@ -72,9 +71,11 @@ def on_join_room(message):
     room_name = message["room_name"]
     player_color = getattr(ReversiStone, message["player_color"])
 
+    # Join room
     room_user_manager.create_user_and_assign_to_room(session_id, room_name, player_color)
     join_room(room_name)
 
+    # Game start
     room = room_user_manager.get_room(room_name)
     if room.is_full():
         emit('game_start', {'turn': room.controller.turn_str}, room=room_name)
@@ -83,10 +84,12 @@ def on_join_room(message):
 def on_disconnect():
     session_id = request.sid
 
+    # Leave room
     user = room_user_manager.get_user(session_id)
     room_user_manager.remove_user(session_id)
     leave_room(user.room_name)
     
+    # Delete room
     room = room_user_manager.get_room(user.room_name)
     if room.is_empty():
         room_user_manager.remove_room(room.room_name)
@@ -95,13 +98,19 @@ def on_disconnect():
 def put(message):
     session_id = request.sid
 
+    # Early return
     user = room_user_manager.get_user(session_id)
     room = room_user_manager.get_room(user.room_name)
-    if user.stone_kind == room.controller.turn:
-        x = int(message['x'])
-        y = int(message['y'])
-        room.controller.put(x, y)
-        emit('update_board', {'board': room.controller.board_str, 'turn': room.controller.turn_str}, room=room.room_name)
+    if not room.is_full():
+        return
+    if user.stone_kind != room.controller.turn:
+        return
+    
+    # Update board
+    x = int(message['x'])
+    y = int(message['y'])
+    room.controller.put(x, y)
+    emit('update_board', {'board': room.controller.board_str, 'turn': room.controller.turn_str}, room=room.room_name)
 
 
 if __name__ == '__main__':
