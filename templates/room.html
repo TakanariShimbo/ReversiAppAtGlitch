@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>リバーシ</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <p id="game-message">相手が入室するまで少々お待ちください。</p>
+  <p id="turn-message"></p>
+  <table id="board">
+    {% for i, row in enumerate(board) %}
+    <tr>
+        {% for j, cell in enumerate(row) %}
+            <td data-x="{{ i }}" data-y="{{ j }}">
+            {% if cell == "BLACK" %}
+                <div class="black-disc"></div>
+            {% elif cell == "WHITE" %}
+                <div class="white-disc"></div>
+            {% endif %}
+            </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+  <script>
+    var socket = io();
+    socket.on('connect', function() {
+    socket.emit('join_room', {room_name: "{{ room_name }}", player_color: "{{ your_color }}"});
+    });
+
+    document.getElementById('board').addEventListener('click', function (event) {
+    if (event.target.tagName === 'TD') {
+        var x = event.target.getAttribute('data-x');
+        var y = event.target.getAttribute('data-y');
+        socket.emit('put', {x: x, y: y});
+    }
+    });
+
+    socket.on('update_board', function (data) {
+    var board = data.board;
+    for (var i = 0; i < 8; i++) {
+        for (var j = 0; j < 8; j++) {
+            var cell = document.querySelector('td[data-x="' + i + '"][data-y="' + j + '"]');
+            var disc = cell.querySelector('.black-disc, .white-disc');
+            if (disc) {
+            cell.removeChild(disc);
+            }
+            if (board[i][j] == "BLACK") {
+            var newDisc = document.createElement('div');
+            newDisc.className = 'black-disc';
+            cell.appendChild(newDisc);
+            } else if (board[i][j] == "WHITE") {
+            var newDisc = document.createElement('div');
+            newDisc.className = 'white-disc';
+            cell.appendChild(newDisc);
+            }
+        }
+    }
+    updateTurnMessage(data.turn);
+    });
+
+    socket.on('game_start', function (data) {
+    var enemy_color = "{{ your_color }}" == "BLACK" ? 'WHITE' : 'BLACK';
+    var message = 'YOU(' + "{{ your_color }}" + ') vs ENEMY(' + enemy_color + ')';
+    var gameMessageElement = document.getElementById('game-message');
+    gameMessageElement.textContent = message;
+
+    updateTurnMessage(data.turn);
+    });
+
+    function updateTurnMessage(turn) {
+    var turnMessageElement = document.getElementById('turn-message');
+    if (turn == "{{ your_color }}") {
+        turnMessageElement.textContent = "Turn: YOU(" + turn + ")";
+    } else {
+        turnMessageElement.textContent = "Turn: ENEMY(" + turn + ")";
+    }
+    }
+  </script>
+</body>
+</html>
