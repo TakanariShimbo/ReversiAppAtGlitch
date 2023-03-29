@@ -30,7 +30,7 @@ class ReversiModel:
 
         # 候補を探索
         current_stone_kind = self.__turn
-        self.__search_candidate(current_stone_kind)
+        self.__search_candidates(current_stone_kind)
 
 
     @property
@@ -50,17 +50,16 @@ class ReversiModel:
         2. 次のコマの種類を返す
         """
         # Early return
-        if self.__can_flip(i_board):
+        if not self.__can_flip(i_board):
             return False
         
         # コマを置き、ひっくり返す
         current_stone_kind = self.__turn
         self.__flip_stones(i_board, current_stone_kind)
-        
 
         # 次のコマを置ける候補を探す
         reverse_stone_kind = self.__get_reverse_stone_kind(self.__turn)
-        is_find_candidate = self.__search_candidate(reverse_stone_kind)
+        is_find_candidate = self.__search_candidates(reverse_stone_kind)
 
         # 候補が見つかったので、次は反対の色のプレイヤーのターン
         if is_find_candidate:
@@ -69,7 +68,7 @@ class ReversiModel:
         
         # 候補が見つからなかったので、反対の色のターンはスキップされ、同じプレイヤーの候補を再検索する
         current_stone_kind = self.__get_reverse_stone_kind(reverse_stone_kind)
-        is_find_candidate = self.__search_candidate(current_stone_kind)
+        is_find_candidate = self.__search_candidates(current_stone_kind)
 
         # 候補が見つかったので、次も自分のターン
         if is_find_candidate:
@@ -110,20 +109,22 @@ class ReversiModel:
         RIGHT_UP, RIGHT_DOWN, LEFT_UP, LEFT_DOWN = RIGHT+UP, RIGHT+DOWN, LEFT+UP, LEFT+DOWN
         
         # 8方向を走査
-        for unit_vec in (RIGHT, RIGHT_UP, UP, LEFT_UP, LEFT, LEFT_DOWN, DOWN, RIGHT_DOWN):
+        for i_unit in (RIGHT, RIGHT_UP, UP, LEFT_UP, LEFT, LEFT_DOWN, DOWN, RIGHT_DOWN):
             # ひっくり返す候補
             temp = []
 
-            # i_boardとの差
-            vec = unit_vec
+            # 置いたコマの隣が敵のコマ出なければ次へ
+            i_check = i_board + i_unit
+            if self.__board[i_check] != enemy_stone_kind:
+                continue
 
-            # 敵のコマである限り、v方向に進み続け、ひっくり返す候補に加え続ける
-            while self.__board[i_board + vec] == enemy_stone_kind:
-                temp.append(i_board + vec)
-                vec += unit_vec
+            # 敵のコマである限り、unit_vec方向に進み続ける
+            while self.__board[i_check] == enemy_stone_kind:
+                temp.append(i_check)
+                i_check += i_unit
             
-            # 敵のコマのあとが自分のコマなら候補を確定する
-            if self.__board[i_board + vec] == put_stone_kind:
+            # 敵のコマのあとが自分のコマなら置けることが確定
+            if self.__board[i_check] == put_stone_kind:
                 i_turns += temp
 
         # コマを置く、ひっくり返す
@@ -142,7 +143,7 @@ class ReversiModel:
             return ReversiStone.BLACK
             
 
-    def __search_candidate(self, next_stone_kind: ReversiStone) -> bool:
+    def __search_candidates(self, next_stone_kind: ReversiStone) -> bool:
         """
         次のターンの人が置ける場所を置ける場所を探索する
         次のターンの人が置ける場所があればTrue、なければFalseを返す
@@ -180,16 +181,18 @@ class ReversiModel:
         RIGHT_UP, RIGHT_DOWN, LEFT_UP, LEFT_DOWN = RIGHT+UP, RIGHT+DOWN, LEFT+UP, LEFT+DOWN
         
         # 8方向を走査
-        for unit_vec in (RIGHT, RIGHT_UP, UP, LEFT_UP, LEFT, LEFT_DOWN, DOWN, RIGHT_DOWN):
-            # i_boardとの差
-            vec = unit_vec
+        for i_unit in (RIGHT, RIGHT_UP, UP, LEFT_UP, LEFT, LEFT_DOWN, DOWN, RIGHT_DOWN):
+            # 置いたコマの隣が敵のコマ出なければ次へ
+            i_check = i_board + i_unit
+            if self.__board[i_check] != enemy_stone_kind:
+                continue
 
-            # 敵のコマである限り、v方向に進み続ける
-            while self.__board[i_board + vec] == enemy_stone_kind:
-                vec += unit_vec
+            # 敵のコマである限り、unit_vec方向に進み続ける
+            while self.__board[i_check] == enemy_stone_kind:
+                i_check += i_unit
             
             # 敵のコマのあとが自分のコマなら置けることが確定
-            if self.__board[i_board + vec] == put_stone_kind:
+            if self.__board[i_check] == put_stone_kind:
                 return True
             
         # 全方向探索してもひっくり返せるコマが見つからなければ置けないことが確定
