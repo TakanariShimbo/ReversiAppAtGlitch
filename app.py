@@ -22,11 +22,11 @@ def index():
 
 @app.route('/create', methods=['GET', 'POST'])
 def create():
-    # GET
+    # Get
     if request.method == 'GET':
         return render_template('create.html', rooms=room_user_manager.room_name_list)
 
-    # POST
+    # Post
     # Early return
     room_name = request.form['room_name']
     if not room_user_manager.can_create_room(room_name):
@@ -37,11 +37,11 @@ def create():
     
 @app.route('/enter', methods=['GET', 'POST'])
 def enter():
-    # GET
+    # Get
     if request.method == 'GET':
         return render_template('enter.html', rooms=room_user_manager.room_name_list)
     
-    # POST
+    # Post
     # Early return
     room_name = request.form['room_name']
     if not room_user_manager.can_enter_room(room_name):
