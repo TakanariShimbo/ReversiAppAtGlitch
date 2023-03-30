@@ -181,7 +181,31 @@
         }
 
         window.addEventListener('mousedown', onDocumentMouseDown, false);
-        window.addEventListener('touchend', onDocumentMouseDown, false);
+
+        // Add Touch Event
+        function onDocumentTouchStart(event) {
+            event.preventDefault();
+        
+            mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+        
+            raycaster.setFromCamera(mouse, camera);
+        
+            const intersects = raycaster.intersectObjects(scene.children);
+        
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                const x = Math.round((intersect.point.x + 14) / 4);
+                const y = Math.round((intersect.point.z + 14) / 4);
+        
+                if (x >= 0 && x < 8 && y >= 0 && y < 8) {
+                    socket.emit('put', {x: x, y: y});
+                }
+            }
+        }
+        
+        window.addEventListener('touchstart', onDocumentTouchStart, false);
+        
 
         socket.on('update_board', function (data) {
             var board = data.board;
