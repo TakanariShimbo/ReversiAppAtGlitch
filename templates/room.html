@@ -1,90 +1,208 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>リバーシ</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>リバーシ</title>
+    <style>
+        body { 
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: sans-serif;
+        }
+        canvas { 
+            display: block;
+            z-index: 0;
+        }
+        p {
+            position: absolute;
+            margin: 0;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 5px;
+            z-index: 1;
+        }
+        #turn-message {
+            top: 10px;
+        }
+    </style>
 </head>
 <body>
-  <p id="game-message">相手が入室するまで少々お待ちください。</p>
-  <p id="turn-message"></p>
-  <table id="board">
-    {% for i, row in enumerate(board) %}
-    <tr>
-        {% for j, cell in enumerate(row) %}
-            <td data-x="{{ i }}" data-y="{{ j }}">
-                {% if cell == "BLACK" %}
-                    <div class="black-disc"></div>
-                {% elif cell == "WHITE" %}
-                    <div class="white-disc"></div>
-                {% elif cell == "CANDIDATE" %}
-                    <div class="candidate-disc"></div>
-                {% endif %}
-            </td>
-        {% endfor %}
-    </tr>
-    {% endfor %}
-  </table>
+    <p id="turn-message">Please wait a little.</p>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script>
+        var socket = io();
+        socket.on('connect', function() {
+            socket.emit('join_room', {room_name: "{{ room_name }}", player_color: "{{ your_color }}"});
+        });
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-  <script>
-    var socket = io();
-    socket.on('connect', function() {
-    socket.emit('join_room', {room_name: "{{ room_name }}", player_color: "{{ your_color }}"});
-    });
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-    document.getElementById('board').addEventListener('click', function (event) {
-    if (event.target.tagName === 'TD') {
-        var x = event.target.getAttribute('data-x');
-        var y = event.target.getAttribute('data-y');
-        socket.emit('put', {x: x, y: y});
-    };
-    });
+        // Define Renderer
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-    socket.on('update_board', function (data) {
-    var board = data.board;
-    for (var i = 0; i < 8; i++) {
-        for (var j = 0; j < 8; j++) {
-            var cell = document.querySelector('td[data-x="' + i + '"][data-y="' + j + '"]');
-            var disc = cell.querySelector('.black-disc, .white-disc, .candidate-disc');
-            if (disc) {
-                cell.removeChild(disc);
-            }
-            if (board[i][j] == "BLACK") {
-                var newDisc = document.createElement('div');
-                newDisc.className = 'black-disc';
-                cell.appendChild(newDisc);
-            } else if (board[i][j] == "WHITE") {
-                var newDisc = document.createElement('div');
-                newDisc.className = 'white-disc';
-                cell.appendChild(newDisc);
-            } else if (board[i][j] == "CANDIDATE") {
-                var newDisc = document.createElement('div');
-                newDisc.className = 'candidate-disc';
-                cell.appendChild(newDisc);
+        window.addEventListener('resize', function() {
+            const aspectRatio = window.innerWidth / window.innerHeight;
+            camera.aspect = aspectRatio;
+            camera.updateProjectionMatrix();
+        
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }, false);
+
+        // Add board
+        const boardGeometry = new THREE.BoxGeometry(35, 2, 35);
+        const boardMaterial = new THREE.MeshPhongMaterial({color: 0x005000, shininess: 10});
+        const board = new THREE.Mesh(boardGeometry, boardMaterial);
+        scene.add(board);
+
+        // Add grid lines
+        const lineMaterial = new THREE.LineBasicMaterial({color: 0x000000});
+        const lineGeometry = new THREE.BufferGeometry();
+
+        const vertices = [];
+        const size = 33;
+        const divisions = 8;
+        const step = size / divisions;
+
+        for (let i = 0; i <= divisions; i++) {
+            vertices.push(-size / 2, 1.1, i * step - size / 2);
+            vertices.push(size / 2, 1.1, i * step - size / 2);
+
+            vertices.push(i * step - size / 2, 1.1, -size / 2);
+            vertices.push(i * step - size / 2, 1.1, size / 2);
+        }
+
+        lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        const gridLines = new THREE.LineSegments(lineGeometry, lineMaterial);
+        scene.add(gridLines);
+
+        // Add stones
+        const stoneGeometry = new THREE.SphereGeometry(0.8, 32, 32);
+        stoneGeometry.scale(2, 1, 2);
+        const whiteMaterial = new THREE.MeshPhongMaterial({color: 0xeeeeee});
+        const blackMaterial = new THREE.MeshPhongMaterial({color: 0x111111});
+        const greenMaterial = new THREE.MeshPhongMaterial({
+            color: 0x009000,
+            opacity: 0.2,
+            transparent: true
+          });
+        
+        // Initialize empty stones array
+        var boardTuple = {{ board|tojson }};
+        var initial_board = [];
+        for (var i = 0; i < boardTuple.length; i++) {
+            initial_board.push(Array.from(boardTuple[i]));
+        }
+        const stones = [];
+        for (let i = 0; i < 8; i++) {
+            stones[i] = [];
+            for (let j = 0; j < 8; j++) {
+                stones[i][j] = null;
+                if (initial_board[i][j] == "BLACK") {
+                    addStone(i, j, blackMaterial);
+                } else if (initial_board[i][j] == "WHITE") {
+                    addStone(i, j, whiteMaterial);
+                } else if (initial_board[i][j] == "CANDIDATE") {
+                    addStone(i, j, greenMaterial);
+                }
             }
         }
-    }
-    updateTurnMessage(data.turn);
-    });
 
-    socket.on('game_start', function (data) {
-    var enemy_color = "{{ your_color }}" == "BLACK" ? 'WHITE' : 'BLACK';
-    var message = 'YOU(' + "{{ your_color }}" + ') vs ENEMY(' + enemy_color + ')';
-    var gameMessageElement = document.getElementById('game-message');
-    gameMessageElement.textContent = message;
+        // Function to add a stone to the board
+        function addStone(x, y, stoneMaterial) {
+            const stone = new THREE.Mesh(stoneGeometry, stoneMaterial);
+            stone.position.set(x * 4 - 14, 2, y * 4 - 14);
+            // remove current stone
+            if (stones[x][y] != null) {
+                scene.remove(stones[x][y]);
+            }
+            scene.add(stone);
+            stones[x][y] = stone;
+        }
 
-    updateTurnMessage(data.turn);
-    });
+        // Camera and Light Setting
+        camera.position.set(0, 36, -12);
+        camera.lookAt(scene.position);
 
-    function updateTurnMessage(turn) {
-    var turnMessageElement = document.getElementById('turn-message');
-    if (turn == "{{ your_color }}") {
-        turnMessageElement.textContent = "Turn: YOU(" + turn + ")";
-    } else {
-        turnMessageElement.textContent = "Turn: ENEMY(" + turn + ")";
-    }
-    }
-  </script>
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0xffffff, 0.6);
+        pointLight.position.set(5, 100, -20);
+        scene.add(pointLight);
+
+        // Add Click Event
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function onDocumentMouseDown(event) {
+            event.preventDefault();
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(scene.children);
+
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                const x = Math.round((intersect.point.x + 14) / 4);
+                const y = Math.round((intersect.point.z + 14) / 4);
+
+                if (x >= 0 && x < 8 && y >= 0 && y < 8) {
+                    socket.emit('put', {x: x, y: y});
+                }
+            }
+        }
+
+        window.addEventListener('mousedown', onDocumentMouseDown, false);
+
+        socket.on('update_board', function (data) {
+            var board = data.board;
+            for (var i = 0; i < 8; i++) {
+                for (var j = 0; j < 8; j++) {
+                    if (board[i][j] == "BLACK") {
+                        addStone(i, j, blackMaterial)
+                    } else if (board[i][j] == "WHITE") {
+                        addStone(i, j, whiteMaterial)
+                    } else if (board[i][j] == "CANDIDATE") {
+                        addStone(i, j, greenMaterial)
+                    }
+                }
+            }
+            updateTurnMessage(data.turn);
+        });
+        
+        socket.on('game_start', function (data) {
+            updateTurnMessage(data.turn);
+        });
+
+        function updateTurnMessage(turn) {
+            var turnMessageElement = document.getElementById('turn-message');
+            if (turn == "EMPTY") {
+                turnMessageElement.textContent = "Game Finish";
+            } else if (turn == "{{ your_color }}") {
+                turnMessageElement.textContent = "Turn: YOU(" + turn + ")";
+            } else {
+                turnMessageElement.textContent = "Turn: ENEMY(" + turn + ")";
+            }
+        }
+
+        const animate = function () {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        };
+
+        animate();
+    </script>
 </body>
 </html>
