@@ -134,12 +134,14 @@
         function addStone(x, y, stoneMaterial) {
             const stone = new THREE.Mesh(stoneGeometry, stoneMaterial);
             stone.position.set(x * 4 - 14, 2, y * 4 - 14);
-            // remove current stone
-            if (stones[x][y] != null) {
-                scene.remove(stones[x][y]);
-            }
             scene.add(stone);
             stones[x][y] = stone;
+        }
+
+        function removeStone(x, y) {
+            if (stones[x][y] != null){
+                scene.remove(stones[x][y]);
+            }
         }
 
         // Camera and Light Setting
@@ -184,6 +186,7 @@
             var board = data.board;
             for (var i = 0; i < 8; i++) {
                 for (var j = 0; j < 8; j++) {
+                    removeStone(i, j)
                     if (board[i][j] == "BLACK") {
                         addStone(i, j, blackMaterial)
                     } else if (board[i][j] == "WHITE") {
