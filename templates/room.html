@@ -41,17 +41,31 @@
             socket.emit('join_room', {room_name: "{{ room_name }}", player_color: "{{ your_color }}"});
         });
 
+        function getFovByAspect(aspect) {
+            const minAspect = 0.1; // 最小横幅
+            const maxAspect = 1; // 最大横幅
+            const minFov = 125; // 最大視野角
+            const maxFov = 75; // 最小視野角
+        
+            const fov = ((aspect - minAspect) / (maxAspect - minAspect)) * (maxFov - minFov) + minFov;
+            return Math.max(maxFov, Math.min(minFov, fov));
+        }
+
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const initialFov = getFovByAspect(window.innerWidth / window.innerHeight);
+        const camera = new THREE.PerspectiveCamera(initialFov, window.innerWidth / window.innerHeight, 0.1, 1000);
 
         // Define Renderer
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        window.addEventListener('resize', function() {
+        window.addEventListener('resize', function () {
             const aspectRatio = window.innerWidth / window.innerHeight;
+            const newFov = getFovByAspect(window.innerWidth / window.innerHeight);
+        
             camera.aspect = aspectRatio;
+            camera.fov = newFov;
             camera.updateProjectionMatrix();
         
             renderer.setSize(window.innerWidth, window.innerHeight);
