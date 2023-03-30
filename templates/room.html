@@ -181,6 +181,7 @@
         }
 
         window.addEventListener('mousedown', onDocumentMouseDown, false);
+        window.addEventListener('touchend', onDocumentMouseDown, false);
 
         socket.on('update_board', function (data) {
             var board = data.board;
