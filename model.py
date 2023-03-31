@@ -14,6 +14,9 @@ class ReversiModel:
         # 全てEMPTYで盤面を作成
         self.__board = [ReversiStone.EMPTY] * 100
         self.__turn = ReversiStone.BLACK
+        self.__i_put = None
+        self.__i_flips = []
+        self.__i_candidates = []
 
         # BLACKとWHITEのコマを配置
         self.__board[44] = ReversiStone.WHITE
@@ -40,7 +43,18 @@ class ReversiModel:
     @property
     def turn(self):
         return self.__turn
-        
+    
+    @property
+    def i_put(self):
+        return self.__i_put
+    
+    @property
+    def i_flips(self):
+        return self.__i_flips
+    
+    @property
+    def i_candidates(self):
+        return self.__i_candidates
 
     def put(self, i_board: int) -> bool:
         """
@@ -102,7 +116,7 @@ class ReversiModel:
         enemy_stone_kind = self.__get_reverse_stone_kind(put_stone_kind)
 
         # ひっくり返されるマスのリスト
-        i_turns = []
+        i_flips = []
 
         # 方向パラメータ
         UP, DOWN, LEFT, RIGHT = -10, 10, -1, 1
@@ -111,7 +125,7 @@ class ReversiModel:
         # 8方向を走査
         for i_unit in (RIGHT, RIGHT_UP, UP, LEFT_UP, LEFT, LEFT_DOWN, DOWN, RIGHT_DOWN):
             # ひっくり返す候補
-            temp = []
+            i_flips_temp = []
 
             # 置いたコマの隣が敵のコマ出なければ次へ
             i_check = i_board + i_unit
@@ -120,18 +134,19 @@ class ReversiModel:
 
             # 敵のコマである限り、unit_vec方向に進み続ける
             while self.__board[i_check] == enemy_stone_kind:
-                temp.append(i_check)
+                i_flips_temp.append(i_check)
                 i_check += i_unit
             
             # 敵のコマのあとが自分のコマなら置けることが確定
             if self.__board[i_check] == put_stone_kind:
-                i_turns += temp
+                i_flips += i_flips_temp
 
         # コマを置く、ひっくり返す
         self.__board[i_board] = put_stone_kind
-        for i_turn in i_turns:
-            self.__board[i_turn] = put_stone_kind
-    
+        for i_flip in i_flips:
+            self.__board[i_flip] = put_stone_kind
+        self.__i_put = i_board
+        self.__i_flips = i_flips
 
     def __get_reverse_stone_kind(self, stone_kind: ReversiStone) -> ReversiStone:
         """
@@ -154,13 +169,20 @@ class ReversiModel:
                 self.__board[i] = ReversiStone.EMPTY
 
         # 次の候補を探す
-        is_find_candidate = False
+        i_candidates = []
         for i, _ in enumerate(self.__board.copy()):
             if self.__is_candidate(i, next_stone_kind):
-                is_find_candidate = True
-                self.__board[i] = ReversiStone.CANDIDATE
+                i_candidates.append(i)
 
-        return is_find_candidate
+        # 候補を反映させる
+        for i_candidate in i_candidates:
+            self.__board[i_candidate] = ReversiStone.CANDIDATE
+        self.__i_candidates = i_candidates
+
+        if i_candidates:
+            return True
+        else:
+            return False
         
 
     def __is_candidate(self, i_board: int, put_stone_kind: ReversiStone) -> bool:
