@@ -236,14 +236,13 @@
         }
 
         function onDocumentMouseDown(event) {
-            event.preventDefault();
             onDocumentMouseDownAndTouchStart(event.clientX, event.clientY);
         }
         window.addEventListener('mousedown', onDocumentMouseDown, false);
 
         function onDocumentTouchStart(event) {
-            event.preventDefault();
-            onDocumentMouseDownAndTouchStart(event.touches[0].clientX, event.touches[0].clientY);
+            const touch = event.touches[0] || event.changedTouches[0];
+            onDocumentMouseDownAndTouchStart(touch.clientX, touch.clientY);
         }
         window.addEventListener('touchstart', onDocumentTouchStart, false);
 
