@@ -36,24 +36,44 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script>
+        // Define socket
         var socket = io();
+        
+        // Emmit Connect Event
         socket.on('connect', function() {
             socket.emit('join_room', {room_name: "{{ room_name }}", player_color: "{{ your_color }}"});
         });
 
+        // Update turn message
+        function updateTurnMessage(turn) {
+            var turnMessageElement = document.getElementById('turn-message');
+            if (turn == "EMPTY") {
+                turnMessageElement.textContent = "Game Finish";
+            } else if (turn == "{{ your_color }}") {
+                turnMessageElement.textContent = "Turn: YOU(" + turn + ")";
+            } else {
+                turnMessageElement.textContent = "Turn: ENEMY(" + turn + ")";
+            }
+        }
+
+        // Define Scene
+        const scene = new THREE.Scene();
+
+        // Define Camera
         function getFovByAspect(aspect) {
             const minAspect = 0.1; // 最小横幅
-            const maxAspect = 1; // 最大横幅
-            const minFov = 125; // 最大視野角
-            const maxFov = 75; // 最小視野角
+            const maxAspect = 1;   // 最大横幅
+            const minFov = 125;    // 最大視野角
+            const maxFov = 75;     // 最小視野角
         
             const fov = ((aspect - minAspect) / (maxAspect - minAspect)) * (maxFov - minFov) + minFov;
             return Math.max(maxFov, Math.min(minFov, fov));
         }
 
-        const scene = new THREE.Scene();
         const initialFov = getFovByAspect(window.innerWidth / window.innerHeight);
         const camera = new THREE.PerspectiveCamera(initialFov, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 36, -12);
+        camera.lookAt(scene.position);
 
         // Define Renderer
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -74,8 +94,8 @@
         // Add board
         const boardGeometry = new THREE.BoxGeometry(35, 2, 35);
         const boardMaterial = new THREE.MeshPhongMaterial({color: 0x005000, shininess: 10});
-        const board = new THREE.Mesh(boardGeometry, boardMaterial);
-        scene.add(board);
+        const boardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
+        scene.add(boardMesh);
 
         // Add grid lines
         const lineMaterial = new THREE.LineBasicMaterial({color: 0x000000});
@@ -103,51 +123,88 @@
         stoneGeometry.scale(2, 1, 2);
         const whiteMaterial = new THREE.MeshPhongMaterial({color: 0xeeeeee});
         const blackMaterial = new THREE.MeshPhongMaterial({color: 0x111111});
-        const greenMaterial = new THREE.MeshPhongMaterial({
-            color: 0x009000,
-            opacity: 0.2,
-            transparent: true
-          });
+        const candidateMaterial = new THREE.MeshPhongMaterial({color: 0x009000, opacity: 0.2, transparent: true});
         
-        // Initialize empty stones array
-        var boardTuple = {{ board|tojson }};
-        var initial_board = [];
-        for (var i = 0; i < boardTuple.length; i++) {
-            initial_board.push(Array.from(boardTuple[i]));
+        function updateStoneMesh(x, y, stoneKind) {
+            // Remove current stoneMaterial
+            if (stoneMeshs[x][y] != null){
+                scene.remove(stoneMeshs[x][y]);
+            }
+
+            // Define stoneMaterial
+            let stoneMaterial;
+            if (stoneKind == "BLACK") {
+                stoneMaterial = blackMaterial;
+            } else if (stoneKind == "WHITE") {
+                stoneMaterial = whiteMaterial;
+            } else if (stoneKind == "CANDIDATE") {
+                stoneMaterial = candidateMaterial;
+            } else {
+                return;
+            }
+
+            // Add stoneMesh
+            const stoneMesh = new THREE.Mesh(stoneGeometry, stoneMaterial);
+            stoneMesh.position.set(x * 4 - 14, 2, y * 4 - 14);
+            scene.add(stoneMesh);
+            stoneMeshs[x][y] = stoneMesh;
         }
-        const stones = [];
+
+        const initial_board = {{ board|tojson }};
+        const stoneMeshs = [];
         for (let i = 0; i < 8; i++) {
-            stones[i] = [];
+            stoneMeshs[i] = [];
             for (let j = 0; j < 8; j++) {
-                stones[i][j] = null;
-                if (initial_board[i][j] == "BLACK") {
-                    addStone(i, j, blackMaterial);
-                } else if (initial_board[i][j] == "WHITE") {
-                    addStone(i, j, whiteMaterial);
-                } else if (initial_board[i][j] == "CANDIDATE") {
-                    addStone(i, j, greenMaterial);
+                stoneMeshs[i][j] = null;
+                updateStoneMesh(i, j, initial_board[i][j]);
+            }
+        }
+
+        socket.on('update_board', function (data) {
+            const board = data.board;
+            const previous_board = data.previous_board;
+            const xy_put = data.xy_put;
+            const xy_flips = data.xy_flips;
+            const xy_candidates = data.xy_candidates;
+            var x;
+            var y;
+
+            for (var i = 0; i < 8; i++) {
+                for (var j = 0; j < 8; j++) {
+                    updateStoneMesh(i, j, previous_board[i][j]);
                 }
             }
-        }
-
-        // Function to add a stone to the board
-        function addStone(x, y, stoneMaterial) {
-            const stone = new THREE.Mesh(stoneGeometry, stoneMaterial);
-            stone.position.set(x * 4 - 14, 2, y * 4 - 14);
-            scene.add(stone);
-            stones[x][y] = stone;
-        }
-
-        function removeStone(x, y) {
-            if (stones[x][y] != null){
-                scene.remove(stones[x][y]);
+            
+            x = xy_put[0];
+            y = xy_put[1];
+            updateStoneMesh(x, y, board[x][y]);
+            
+            for (let i = 0; i < xy_flips.length; i++) {
+                let xy_flip = xy_flips[i];
+                setTimeout(function(xy_flip) {
+                    x = xy_flip[0];
+                    y = xy_flip[1];
+                    updateStoneMesh(x, y, board[x][y]);
+                }, 150*(i+1), xy_flip);
             }
-        }
 
-        // Camera and Light Setting
-        camera.position.set(0, 36, -12);
-        camera.lookAt(scene.position);
+            setTimeout(function() {
+                for (let i = 0; i < xy_candidates.length; i++) {
+                    let xy_candidate = xy_candidates[i];
+                    x = xy_candidate[0];
+                    y = xy_candidate[1];
+                    updateStoneMesh(x, y, board[x][y]);
+                }
 
+                updateTurnMessage(data.turn);   
+            }, 150*xy_flips.length);
+        });
+
+        socket.on('game_start', function (data) {
+            updateTurnMessage(data.turn);
+        });
+
+        // Add Light Setting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
 
@@ -155,90 +212,42 @@
         pointLight.position.set(5, 100, -20);
         scene.add(pointLight);
 
-        // Add Click Event
+        // Add Click and Touch Event
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
+        function onDocumentMouseDownAndTouchStart(clientX, clientY) {
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(scene.children);
+
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                const x = Math.round((intersect.point.x + 14) / 4);
+                const y = Math.round((intersect.point.z + 14) / 4);
+
+                if (x >= 0 && x < 8 && y >= 0 && y < 8) {
+                    socket.emit('put', {x: x, y: y});
+                }
+            }
+        }
+
         function onDocumentMouseDown(event) {
             event.preventDefault();
-
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-
-            const intersects = raycaster.intersectObjects(scene.children);
-
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
-                const x = Math.round((intersect.point.x + 14) / 4);
-                const y = Math.round((intersect.point.z + 14) / 4);
-
-                if (x >= 0 && x < 8 && y >= 0 && y < 8) {
-                    socket.emit('put', {x: x, y: y});
-                }
-            }
+            onDocumentMouseDownAndTouchStart(event.clientX, event.clientY);
         }
-
         window.addEventListener('mousedown', onDocumentMouseDown, false);
 
-        // Add Touch Event
         function onDocumentTouchStart(event) {
             event.preventDefault();
-        
-            mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
-        
-            raycaster.setFromCamera(mouse, camera);
-        
-            const intersects = raycaster.intersectObjects(scene.children);
-        
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
-                const x = Math.round((intersect.point.x + 14) / 4);
-                const y = Math.round((intersect.point.z + 14) / 4);
-        
-                if (x >= 0 && x < 8 && y >= 0 && y < 8) {
-                    socket.emit('put', {x: x, y: y});
-                }
-            }
+            onDocumentMouseDownAndTouchStart(event.touches[0].clientX, event.touches[0].clientY);
         }
-        
         window.addEventListener('touchstart', onDocumentTouchStart, false);
-        
 
-        socket.on('update_board', function (data) {
-            var board = data.board;
-            for (var i = 0; i < 8; i++) {
-                for (var j = 0; j < 8; j++) {
-                    removeStone(i, j)
-                    if (board[i][j] == "BLACK") {
-                        addStone(i, j, blackMaterial)
-                    } else if (board[i][j] == "WHITE") {
-                        addStone(i, j, whiteMaterial)
-                    } else if (board[i][j] == "CANDIDATE") {
-                        addStone(i, j, greenMaterial)
-                    }
-                }
-            }
-            updateTurnMessage(data.turn);
-        });
-        
-        socket.on('game_start', function (data) {
-            updateTurnMessage(data.turn);
-        });
-
-        function updateTurnMessage(turn) {
-            var turnMessageElement = document.getElementById('turn-message');
-            if (turn == "EMPTY") {
-                turnMessageElement.textContent = "Game Finish";
-            } else if (turn == "{{ your_color }}") {
-                turnMessageElement.textContent = "Turn: YOU(" + turn + ")";
-            } else {
-                turnMessageElement.textContent = "Turn: ENEMY(" + turn + ")";
-            }
-        }
-
+        // Define and Run animation
         const animate = function () {
             requestAnimationFrame(animate);
             renderer.render(scene, camera);
