@@ -43,9 +43,9 @@
         function updateTurnMessage(turn) {
             var turnMessageElement = document.getElementById('turn-message');            
             if (turn == "{{ your_color }}") {
-                turnMessageElement.textContent = "Turn: YOU(" + turn + ")";
+                turnMessageElement.textContent = "YOUR(" + turn + ") TURN";
             } else {
-                turnMessageElement.textContent = "Turn: ENEMY(" + turn + ")";
+                turnMessageElement.textContent = "ENEMY(" + turn + ") TURN";
             }
         }
 
@@ -197,11 +197,19 @@
             var result_message;
             var wait_count;
             if (black_stone_count > white_stone_count) {
-                result_message = "BLACK WIN";
                 wait_count = black_stone_count;
+                if ("BLACK" == "{{ your_color }}") {
+                    result_message = "YOU(BLACK) WIN";
+                } else {
+                    result_message = "ENEMY(BLACK) WIN";
+                }
             } else if (black_stone_count < white_stone_count) {
-                result_message = "WHITE WIN";
                 wait_count = white_stone_count;
+                if ("WHITE" == "{{ your_color }}") {
+                    result_message = "YOU(WHITE) WIN";
+                } else {
+                    result_message = "ENEMY(WHITE) WIN";
+                }            
             } else {
                 result_message = "DRAW";
                 wait_count = black_stone_count;
