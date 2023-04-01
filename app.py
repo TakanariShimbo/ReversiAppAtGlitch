@@ -111,14 +111,14 @@ def put(message):
     y = int(message['y'])
     if room.controller.put(x, y):
         emit('update_board', {
+            'board': room.controller.board_str, 
             'previous_board': room.controller.previous_board_str, 
             'xy_put': room.controller.xy_put, 
             'xy_flips': room.controller.xy_flips,
             'xy_candidates': room.controller.xy_candidates,
-            'board': room.controller.board_str, 
             'turn': room.controller.turn_str
         }, room=room.room_name)
 
 
 if __name__ == '__main__':
-    socketio.run(app)
+    socketio.run(app, debug=True)

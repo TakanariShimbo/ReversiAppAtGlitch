@@ -219,19 +219,19 @@
         function onDocumentMouseDownAndTouchStart(clientX, clientY) {
             mouse.x = (clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(clientY / window.innerHeight) * 2 + 1;
-
             raycaster.setFromCamera(mouse, camera);
-
             const intersects = raycaster.intersectObjects(scene.children);
 
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
-                const x = Math.round((intersect.point.x + 14) / 4);
-                const y = Math.round((intersect.point.z + 14) / 4);
+            if (intersects.length == 0) {
+                return;
+            }
 
-                if (x >= 0 && x < 8 && y >= 0 && y < 8) {
-                    socket.emit('put', {x: x, y: y});
-                }
+            const intersect = intersects[0];
+            const x = Math.round((intersect.point.x + 14) / 4);
+            const y = Math.round((intersect.point.z + 14) / 4);
+
+            if (x >= 0 && x < 8 && y >= 0 && y < 8) {
+                socket.emit('put', {x: x, y: y});
             }
         }
 
