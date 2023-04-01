@@ -38,23 +38,36 @@
     <script>
         // Define socket
         var socket = io();
-        
-        // Emmit Connect Event
-        socket.on('connect', function() {
-            socket.emit('join_room', {room_name: "{{ room_name }}", player_color: "{{ your_color }}"});
-        });
 
-        // Update turn message
+        // Emmit Connect Event and Disconnect Event
         function updateTurnMessage(turn) {
-            var turnMessageElement = document.getElementById('turn-message');
-            if (turn == "EMPTY") {
-                turnMessageElement.textContent = "Game Finish";
-            } else if (turn == "{{ your_color }}") {
+            var turnMessageElement = document.getElementById('turn-message');            
+            if (turn == "{{ your_color }}") {
                 turnMessageElement.textContent = "Turn: YOU(" + turn + ")";
             } else {
                 turnMessageElement.textContent = "Turn: ENEMY(" + turn + ")";
             }
         }
+
+        socket.on('connect', function() {
+            socket.emit('join_room', {room_name: "{{ room_name }}", player_color: "{{ your_color }}"});
+        });
+
+        socket.on('game_start', function (data) {
+            const turn = data.turn;
+            updateTurnMessage(turn);
+        });
+
+        socket.on('left_room', function (data) {
+            var leftPlayerColor = data.player_color;
+            var turnMessageElement = document.getElementById('turn-message');
+            turnMessageElement.textContent = "Player " + leftPlayerColor + " has left the room.";
+        });
+
+        socket.on('disconnect', function() {
+            var turnMessageElement = document.getElementById('turn-message');
+            turnMessageElement.textContent = "Disconnected from server. Please refresh the page.";
+        });
 
         // Define Scene
         const scene = new THREE.Scene();
@@ -149,6 +162,54 @@
             scene.add(stoneMesh);
             stoneMeshs[x][y] = stoneMesh;
         }
+        
+        // Update turn message
+        function gameFinishEvent(black_stone_count, white_stone_count) {
+            var turnMessageElement = document.getElementById('turn-message'); 
+            turnMessageElement.textContent = "COUNTING";
+
+            // Prepare Empty state
+            for (var i = 0; i < 8; i++) {
+                for (var j = 0; j < 8; j++) {
+                    updateStoneMesh(i, j, null);
+                }
+            }
+            
+            // Put Black Stones
+            for (let i = 0; i < black_stone_count; i++) {
+                setTimeout(function(z) {
+                    const x = Math.floor(z / 8);
+                    const y = z % 8;
+                    updateStoneMesh(x, y, "BLACK");
+                }, 150*(i+1), i);
+            }
+
+            // Put White Stones
+            for (let i = 0; i < white_stone_count; i++) {
+                setTimeout(function(z) {
+                    const x = Math.floor(z / 8);
+                    const y = z % 8;
+                    updateStoneMesh(7-x, 7-y, "WHITE");
+                }, 150*(i+1), i);
+            }
+
+            // Update Message
+            var result_message;
+            var wait_count;
+            if (black_stone_count > white_stone_count) {
+                result_message = "BLACK WIN";
+                wait_count = black_stone_count;
+            } else if (black_stone_count < white_stone_count) {
+                result_message = "WHITE WIN";
+                wait_count = white_stone_count;
+            } else {
+                result_message = "DRAW";
+                wait_count = black_stone_count;
+            }
+            setTimeout(function(message) {
+                turnMessageElement.textContent = message;
+            }, 150*wait_count, result_message);
+        }
 
         const initial_board = {{ board|tojson }};
         const stoneMeshs = [];
@@ -161,47 +222,53 @@
         }
 
         socket.on('update_board', function (data) {
-            const board = data.board;
+            const current_board = data.current_board;
             const previous_board = data.previous_board;
             const xy_put = data.xy_put;
             const xy_flips = data.xy_flips;
             const xy_candidates = data.xy_candidates;
+            const black_stone_count = data.black_stone_count;
+            const white_stone_count = data.white_stone_count;
             var x;
             var y;
 
+            // Prepare Previous state
             for (var i = 0; i < 8; i++) {
                 for (var j = 0; j < 8; j++) {
                     updateStoneMesh(i, j, previous_board[i][j]);
                 }
             }
             
+            // Put Stone
             x = xy_put[0];
             y = xy_put[1];
-            updateStoneMesh(x, y, board[x][y]);
+            updateStoneMesh(x, y, current_board[x][y]);
             
+            // Flip stones
             for (let i = 0; i < xy_flips.length; i++) {
                 let xy_flip = xy_flips[i];
                 setTimeout(function(xy_flip) {
                     x = xy_flip[0];
                     y = xy_flip[1];
-                    updateStoneMesh(x, y, board[x][y]);
+                    updateStoneMesh(x, y, current_board[x][y]);
                 }, 150*(i+1), xy_flip);
             }
-
+            
+            // Put Candidate stones
             setTimeout(function() {
                 for (let i = 0; i < xy_candidates.length; i++) {
                     let xy_candidate = xy_candidates[i];
                     x = xy_candidate[0];
                     y = xy_candidate[1];
-                    updateStoneMesh(x, y, board[x][y]);
+                    updateStoneMesh(x, y, current_board[x][y]);
                 }
 
-                updateTurnMessage(data.turn);   
+                if (data.turn == "EMPTY") {
+                    gameFinishEvent(black_stone_count, white_stone_count);
+                } else {
+                    updateTurnMessage(data.turn);
+                }
             }, 150*xy_flips.length);
-        });
-
-        socket.on('game_start', function (data) {
-            updateTurnMessage(data.turn);
         });
 
         // Add Light Setting

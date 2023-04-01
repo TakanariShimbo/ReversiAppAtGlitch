@@ -93,6 +93,8 @@ def on_disconnect():
     room = room_user_manager.get_room(user.room_name)
     if room.is_empty():
         room_user_manager.remove_room(room.room_name)
+    else:
+        emit('left_room', {'player_color': user.stone_kind.name}, room=user.room_name)
 
 @socketio.on('put')
 def put(message):
@@ -111,12 +113,14 @@ def put(message):
     y = int(message['y'])
     if room.controller.put(x, y):
         emit('update_board', {
-            'board': room.controller.board_str, 
+            'current_board': room.controller.board_str, 
             'previous_board': room.controller.previous_board_str, 
             'xy_put': room.controller.xy_put, 
             'xy_flips': room.controller.xy_flips,
             'xy_candidates': room.controller.xy_candidates,
-            'turn': room.controller.turn_str
+            'turn': room.controller.turn_str,
+            'black_stone_count': room.controller.black_stone_count,
+            'white_stone_count': room.controller.white_stone_count
         }, room=room.room_name)
 
 

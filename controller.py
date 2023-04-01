@@ -45,8 +45,12 @@ class ReversiController:
         bd = [previous_board_str[10 * i + 1:10 * i + 9] for i in range(1, 9)]
         return tuple(zip(*bd))
     
+
     @property
     def xy_put(self):
+        """
+        コマを置いた座標を返す
+        """
         y = int(self.__model.i_put / 10)
         x = int(self.__model.i_put -10*y)
         return [x-1, y-1]
@@ -54,6 +58,9 @@ class ReversiController:
 
     @property
     def xy_flips(self):
+        """
+        ひっくり返すコマらの座標を返す
+        """
         xy_flips = []
         for i_flip in self.__model.i_flips:
             y = int(i_flip / 10)
@@ -64,6 +71,9 @@ class ReversiController:
 
     @property
     def xy_candidates(self):
+        """
+        候補のコマらの座標を返す
+        """
         xy_candidates = []
         for i_candidate in self.__model.i_candidates:
             y = int(i_candidate / 10)
@@ -74,9 +84,31 @@ class ReversiController:
 
     @property
     def turn(self) -> ReversiStone:
+        """
+        現在のターンを ReversiStone で返す
+        """
         return self.__model.turn
     
 
     @property
     def turn_str(self) -> str:
+        """
+        現在のターンを str で返す
+        """
         return self.__model.turn.name
+
+
+    @property
+    def black_stone_count(self):
+        """
+        現在の黒石の数
+        """
+        return self.__model.board.count(ReversiStone.BLACK)
+    
+    
+    @property
+    def white_stone_count(self):
+        """
+        現在の白石の数
+        """
+        return self.__model.board.count(ReversiStone.WHITE)
