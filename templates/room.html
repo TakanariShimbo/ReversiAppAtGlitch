@@ -39,6 +39,7 @@
         const room_name = "{{ room_name }}";
         const your_color = "{{ your_color }}";
         const initial_board = {{ board|tojson }};
+        const path_put_stone_sound = "{{ url_for('static', filename='put_stone_sound.mp3') }}"; 
 
         const initialInnerWidth = window.innerWidth;
         const initialInnerHeight = window.innerHeight;

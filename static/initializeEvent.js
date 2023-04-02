@@ -1,8 +1,9 @@
 
-
 // Prepare Static instance
 const scene = generateScene();
+
 const camera = generateCamera();
+
 const renderer = generateRenderer();
 
 const boardMesh = generateBoard();
@@ -17,6 +18,22 @@ scene.add(ambientLight);
 const pointLight = generatePointLight();
 scene.add(pointLight);
 
+const listener = new THREE.AudioListener();
+camera.add(listener);
+
+const stoneAudio = new THREE.Audio(listener);
+const audioLoader = new THREE.AudioLoader();
+audioLoader.load(path_put_stone_sound, function (buffer) {
+    stoneAudio.setBuffer(buffer);
+});
+
+function playStoneAudio() {
+    if (stoneAudio.isPlaying) {
+        stoneAudio.stop();
+    }
+    stoneAudio.play();
+}
+
 const stoneMeshs = [];
 for (let i = 0; i < 8; i++) {
     stoneMeshs[i] = [];
@@ -25,8 +42,9 @@ for (let i = 0; i < 8; i++) {
     }
 }
 
+
 // threeFunction
-function updateStoneMesh(x, y, stoneKind) {
+async function updateStoneMesh(x, y, stoneKind) {
     // Remove current stoneMaterial
     if (stoneMeshs[x][y] != null){
         scene.remove(stoneMeshs[x][y]);
@@ -36,11 +54,17 @@ function updateStoneMesh(x, y, stoneKind) {
     const stoneMesh = generateStone(x, y, stoneKind);
     scene.add(stoneMesh);
     stoneMeshs[x][y] = stoneMesh;
+
+    // Play audio when a black or white stone is placed
+    if (stoneKind === "BLACK" || stoneKind === "WHITE") {
+        playStoneAudio();
+    }
 }
 
 function updateStoneMeshByBoard(x, y, board){
     updateStoneMesh(x, y, board[x][y]);
 }
+
 
 // Initialize
 for (let i = 0; i < 8; i++) {
@@ -49,13 +73,14 @@ for (let i = 0; i < 8; i++) {
     }
 }
 
+
 // Define and Run animation
 const animate = function () {
     requestAnimationFrame(animate);
     renderer.render(scene, camera);
 };
-
 animate();
+
 
 // Prepare Event Listener
 function onMouseDownEvent(event) {

@@ -78,7 +78,7 @@ def on_join_room(message):
     # Game start
     room = room_user_manager.get_room(room_name)
     if room.is_full():
-        emit('game_start', {'turn': room.controller.turn_str}, room=room_name)
+        emit('game_start', {'turn_color': room.controller.turn_str}, room=room_name)
 
 @socketio.on('disconnect')
 def on_disconnect():
@@ -118,7 +118,7 @@ def put(message):
             'xy_put': room.controller.xy_put, 
             'xy_flips': room.controller.xy_flips,
             'xy_candidates': room.controller.xy_candidates,
-            'turn': room.controller.turn_str,
+            'turn_color': room.controller.turn_str,
             'black_stone_count': room.controller.black_stone_count,
             'white_stone_count': room.controller.white_stone_count
         }, room=room.room_name)
