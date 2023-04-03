@@ -127,6 +127,6 @@ function onMouseDownAndTouchStartEvent(clientX, clientY, socket) {
     const y = Math.round((intersect.point.z + 14) / 4);
 
     if (x >= 0 && x < 8 && y >= 0 && y < 8) {
-        socket.emit('put', {x: x, y: y});
+        socket.emit('reversi_put_stone', {x: x, y: y});
     }
 }

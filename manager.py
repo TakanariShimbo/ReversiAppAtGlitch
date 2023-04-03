@@ -1,12 +1,12 @@
-from stone import ReversiStone
-from controller import ReversiController
+from abc import ABC, abstractmethod
+
+from logic.reversi.controller import ReversiPlayer, ReversiController
 
 
 class User:
-    def __init__(self, session_id: str, room_name: str, stone_kind: ReversiStone) -> None:
+    def __init__(self, session_id: str, room_name: str) -> None:
         self.__session_id = session_id
         self.__room_name = room_name
-        self.__stone_kind = stone_kind
         
     @property
     def session_id(self) -> str:
@@ -16,20 +16,38 @@ class User:
     def room_name(self) -> str:
         return self.__room_name
     
+
+class ReversiUser(User):
+    def __init__(self, session_id: str, room_name: str, player_color: str) -> None:
+        super().__init__(session_id, room_name)
+        self.__player_color = getattr(ReversiPlayer, player_color)
+
     @property
-    def stone_kind(self) -> ReversiStone:
-        return self.__stone_kind
+    def player_color(self) -> ReversiPlayer:
+        return self.__player_color
     
 
-class Room:
-    def __init__(self, room_name: str, controller: ReversiController) -> None:
+class Room(ABC):
+    def __init__(self, room_name: str) -> None:
         self.__room_name = room_name
-        self.__controller = controller
-        self.__players = {}
 
     @property
     def room_name(self) -> str:
         return self.__room_name
+
+    @abstractmethod
+    def is_empty(self) -> bool:
+        pass
+
+    @abstractmethod
+    def is_full(self) -> bool:
+        pass
+
+class ReversiRoom(Room):
+    def __init__(self, room_name: str) -> None:
+        super().__init__(room_name)
+        self.__controller = ReversiController()
+        self.__players = {}
 
     @property
     def players(self):
@@ -39,11 +57,11 @@ class Room:
     def controller(self) -> ReversiController:
         return self.__controller
 
-    def add_player(self, stone_kind: ReversiStone,session_id: str) -> None:
-        self.__players[stone_kind] = session_id
+    def add_player(self, player_color: ReversiPlayer, session_id: str) -> None:
+        self.__players[player_color] = session_id
 
-    def remove_player(self, stone_kind: ReversiStone) -> None:
-        del self.__players[stone_kind]
+    def remove_player(self, player_color: ReversiPlayer) -> None:
+        del self.__players[player_color]
 
     def is_empty(self) -> bool:
         return len(self.__players) == 0
@@ -51,8 +69,8 @@ class Room:
     def is_full(self) -> bool:
         return len(self.__players) == 2
     
-    def get_empty_stone_kind(self) -> ReversiStone:
-        return ({ReversiStone.BLACK, ReversiStone.WHITE} - set(self.__players.keys())).pop()
+    def get_empty_player_color(self) -> ReversiPlayer:
+        return ({ReversiPlayer.BLACK, ReversiPlayer.WHITE} - set(self.__players.keys())).pop()
 
 
 class RoomUserManager:
@@ -60,49 +78,46 @@ class RoomUserManager:
         self.__room_dict = {}
         self.__user_dict = {}
 
-    def get_user(self, session_id: str) -> User:
+    def get_user(self, session_id: str) -> ReversiUser:
         return self.__user_dict.get(session_id)
     
-    def get_room(self, room_name: str) -> Room:
+    def get_room(self, room_name: str) -> ReversiRoom:
         return self.__room_dict.get(room_name)
     
     @property
     def room_name_list(self):
         return list(self.__room_dict.keys())
 
-    def can_enter_room(self, room_name: str) -> bool:
+    def is_exists_room(self, room_name: str) -> bool:
         if room_name in self.room_name_list:
             return True
         else:
             return False
-
-    def can_create_room(self, room_name: str) -> bool:
-        if room_name in self.room_name_list:
-            return False
-        return True
     
-    def create_room(self, room_name: str) -> None:
-        room = Room(room_name, ReversiController())
-        self.__room_dict[room_name] = room        
+    def create_room(self, room_name: str) -> ReversiRoom:
+        room = ReversiRoom(room_name)
+        self.__room_dict[room_name] = room
+        return room
 
-    def create_user_and_assign_to_room(self, session_id: str, room_name: str, stone_kind: ReversiStone) -> None:
-        self.__create_user(session_id, room_name, stone_kind)
-        self.__assign_to_room(room_name, stone_kind, session_id)
+    def create_user_and_assign_to_room(self, session_id: str, room_name: str, player_color: str) -> None:
+        user = self.__create_user(session_id, room_name, player_color)
+        self.__assign_to_room(room_name, user.player_color, session_id)
 
-    def __create_user(self, session_id, room_name, stone_kind):
-        user = User(session_id, room_name, stone_kind)
+    def __create_user(self, session_id, room_name, player_color):
+        user = ReversiUser(session_id, room_name, player_color)
         self.__user_dict[session_id] = user
+        return user
 
-    def __assign_to_room(self, room_name, stone_kind, session_id):
+    def __assign_to_room(self, room_name, player_color, session_id):
         room = self.get_room(room_name)
-        room.add_player(stone_kind, session_id)
+        room.add_player(player_color, session_id)
 
     def remove_user(self, session_id: str) -> None:
         user = self.get_user(session_id)
         room = self.get_room(user.room_name)
 
         self.__remove_user(session_id)
-        room.remove_player(user.stone_kind)
+        room.remove_player(user.player_color)
 
     def __remove_user(self, session_id):
         del self.__user_dict[session_id]

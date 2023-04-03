@@ -2,16 +2,16 @@
 
 // Update Message
 function updateMessage(message) {
-    const messageElement = document.getElementById('turn-message');
+    const messageElement = document.getElementById('message');
     messageElement.textContent = message;
 }
 
-function updateMessageByTurn(turn) {           
+function updateMessageByPlayerColor(next_player_color) {           
     let message;
-    if (turn == your_color) {
-        message = "YOUR(" + turn + ") TURN";
+    if (next_player_color == this_player_color) {
+        message = "YOUR(" + next_player_color + ") TURN";
     } else {
-        message = "ENEMY(" + turn + ") TURN";
+        message = "ENEMY(" + next_player_color + ") TURN";
     }
 
     updateMessage(message);

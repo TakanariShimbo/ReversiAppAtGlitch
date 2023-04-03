@@ -3,8 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, abort
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from dotenv import load_dotenv
 
-from stone import ReversiStone
-from manager import RoomUserManager
+from manager import ReversiRoom, RoomUserManager
 
 
 load_dotenv()
@@ -29,11 +28,12 @@ def create():
     # Post
     # Early return
     room_name = request.form['room_name']
-    if not room_user_manager.can_create_room(room_name):
+    if room_user_manager.is_exists_room(room_name):
         return "この部屋名は既に使用されています。", 400
     
-    room_user_manager.create_room(room_name)
-    return redirect(url_for('room', room_name=room_name))    
+    room = room_user_manager.create_room(room_name)
+    if type(room) == ReversiRoom:
+        return redirect(url_for('riversi', room_name=room_name))     
     
 @app.route('/enter', methods=['GET', 'POST'])
 def enter():
@@ -44,41 +44,25 @@ def enter():
     # Post
     # Early return
     room_name = request.form['room_name']
-    if not room_user_manager.can_enter_room(room_name):
+    if not room_user_manager.is_exists_room(room_name):
         return "この部屋は存在しません。", 400
     
-    return redirect(url_for('room', room_name=room_name))    
-    
-@app.route('/room/<room_name>')
-def room(room_name):
     # Early return
     room = room_user_manager.get_room(room_name)
     if room.is_full():
         abort(403, "This room is full. Please try again later.")
 
-    # Render toom.html    
-    if room.is_empty():
-        player_color = ReversiStone.BLACK
-    else:
-        stone_kind = room.get_empty_stone_kind()
-        player_color = stone_kind
-    return render_template('room.html', room_name=room_name, your_color=player_color.name, board=room.controller.board_str, enumerate=enumerate)
-
-
-@socketio.on('join_room')
-def on_join_room(message):
-    session_id = request.sid
-    room_name = message["room_name"]
-    player_color = getattr(ReversiStone, message["player_color"])
-
-    # Join room
-    room_user_manager.create_user_and_assign_to_room(session_id, room_name, player_color)
-    join_room(room_name)
-
-    # Game start
+    if type(room) == ReversiRoom:
+        return redirect(url_for('riversi', room_name=room_name))    
+    
+@app.route('/riversi/<room_name>')
+def riversi(room_name):
     room = room_user_manager.get_room(room_name)
-    if room.is_full():
-        emit('game_start', {'turn_color': room.controller.turn_str}, room=room_name)
+
+    # Render toom.html    
+    player_color = room.get_empty_player_color()
+    return render_template('riversi.html', room_name=room_name, this_player_color=player_color.name, board=room.controller.current_board_str, enumerate=enumerate)
+
 
 @socketio.on('disconnect')
 def on_disconnect():
@@ -93,11 +77,28 @@ def on_disconnect():
     room = room_user_manager.get_room(user.room_name)
     if room.is_empty():
         room_user_manager.remove_room(room.room_name)
-    else:
-        emit('left_room', {'player_color': user.stone_kind.name}, room=user.room_name)
+    
+    # Emit leave room event
+    if type(room) == ReversiRoom:
+        emit('reversi_left_room', {'player_color': user.player_color.name}, room=user.room_name)
 
-@socketio.on('put')
-def put(message):
+@socketio.on('reversi_join_room')
+def on_reversi_join_room(message):
+    session_id = request.sid
+    room_name = message["room_name"]
+    player_color = message["player_color"]
+
+    # Join room
+    room_user_manager.create_user_and_assign_to_room(session_id, room_name, player_color)
+    join_room(room_name)
+
+    # Game start
+    room = room_user_manager.get_room(room_name)
+    if room.is_full():
+        emit('reversi_game_start', {'next_player_color': room.controller.current_player_color_str}, room=room_name)
+
+@socketio.on('reversi_put_stone')
+def on_reversi_put_stone(message):
     session_id = request.sid
 
     # Early return
@@ -105,24 +106,26 @@ def put(message):
     room = room_user_manager.get_room(user.room_name)
     if not room.is_full():
         return
-    if user.stone_kind != room.controller.turn:
+    if user.player_color != room.controller.current_player_color:
         return
     
     # Update board
     x = int(message['x'])
     y = int(message['y'])
-    if room.controller.put(x, y):
-        emit('update_board', {
-            'current_board': room.controller.board_str, 
-            'previous_board': room.controller.previous_board_str, 
-            'xy_put': room.controller.xy_put, 
-            'xy_flips': room.controller.xy_flips,
-            'xy_candidates': room.controller.xy_candidates,
-            'turn_color': room.controller.turn_str,
+    if room.controller.can_put(x, y):
+        room.controller.put(x, y)
+        emit('reversi_update_board', {
+            'next_board': room.controller.current_board_str, 
+            'current_board': room.controller.previous_board_str, 
+            'xy_put': room.controller.previous_xy_put, 
+            'xy_flips': room.controller.previous_xy_flips,
+            'xy_candidates': room.controller.previous_xy_candidates,
+            'next_player_color': room.controller.current_player_color_str,
             'black_stone_count': room.controller.black_stone_count,
-            'white_stone_count': room.controller.white_stone_count
+            'white_stone_count': room.controller.white_stone_count,
+            'next_state' : room.controller.current_state_str
         }, room=room.room_name)
 
 
 if __name__ == '__main__':
-    socketio.run(app)
+    socketio.run(app, debug=True)
