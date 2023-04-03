@@ -31,7 +31,7 @@ def create():
     if room_user_manager.is_exists_room(room_name):
         return "この部屋名は既に使用されています。", 400
     
-    room = room_user_manager.create_room(room_name)
+    room = room_user_manager.create_reversi_room(room_name)
     if type(room) == ReversiRoom:
         return redirect(url_for('riversi', room_name=room_name))     
     
@@ -57,11 +57,11 @@ def enter():
     
 @app.route('/riversi/<room_name>')
 def riversi(room_name):
-    room = room_user_manager.get_room(room_name)
+    reversi_room = room_user_manager.get_room(room_name)
 
     # Render toom.html    
-    player_color = room.get_empty_player_color()
-    return render_template('riversi.html', room_name=room_name, this_player_color=player_color.name, board=room.controller.current_board_str, enumerate=enumerate)
+    player_color = reversi_room.get_empty_player_color()
+    return render_template('riversi.html', room_name=room_name, this_player_color=player_color.name, board=reversi_room.controller.current_board_str, enumerate=enumerate)
 
 
 @socketio.on('disconnect')
@@ -89,7 +89,7 @@ def on_reversi_join_room(message):
     player_color = message["player_color"]
 
     # Join room
-    room_user_manager.create_user_and_assign_to_room(session_id, room_name, player_color)
+    room_user_manager.create_reversi_user_and_assign_to_room(session_id, room_name, player_color)
     join_room(room_name)
 
     # Game start
@@ -128,4 +128,4 @@ def on_reversi_put_stone(message):
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app)
