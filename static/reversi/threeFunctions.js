@@ -16,7 +16,7 @@ function generateCamera(){
     return camera;
 }
 
-// Define Scene
+// Define Render
 function generateRenderer(){
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(initialInnerWidth, initialInnerHeight);
@@ -109,6 +109,14 @@ function generateStone(x, y, stoneKind) {
 }
 
 // Add Click and Touch Event
+function playAudio(audio){
+    if (!audio.paused) {
+        audio.pause();
+    }
+    audio.currentTime = 0;
+    audio.play();
+}
+
 function onMouseDownAndTouchStartEvent(clientX, clientY, socket) {
     const mouse = new THREE.Vector2();
     mouse.x = (clientX / window.innerWidth) * 2 - 1;

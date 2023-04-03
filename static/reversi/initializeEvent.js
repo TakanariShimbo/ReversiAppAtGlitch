@@ -1,4 +1,7 @@
 
+
+const putStoneAudio = new Audio(path_put_stone_sound);
+
 // Prepare Static instance
 const scene = generateScene();
 
@@ -18,22 +21,6 @@ scene.add(ambientLight);
 const pointLight = generatePointLight();
 scene.add(pointLight);
 
-const listener = new THREE.AudioListener();
-camera.add(listener);
-
-const stoneAudio = new THREE.Audio(listener);
-const audioLoader = new THREE.AudioLoader();
-audioLoader.load(path_put_stone_sound, function (buffer) {
-    stoneAudio.setBuffer(buffer);
-});
-
-function playStoneAudio() {
-    if (stoneAudio.isPlaying) {
-        stoneAudio.stop();
-    }
-    stoneAudio.play();
-}
-
 const stoneMeshs = [];
 for (let i = 0; i < 8; i++) {
     stoneMeshs[i] = [];
@@ -42,9 +29,8 @@ for (let i = 0; i < 8; i++) {
     }
 }
 
-
 // threeFunction
-async function updateStoneMesh(x, y, stoneKind) {
+async function updateStoneMesh(x, y, stoneKind, is_play_sound) {
     // Remove current stoneMaterial
     if (stoneMeshs[x][y] != null){
         scene.remove(stoneMeshs[x][y]);
@@ -52,24 +38,26 @@ async function updateStoneMesh(x, y, stoneKind) {
 
     // Add stoneMesh
     const stoneMesh = generateStone(x, y, stoneKind);
-    scene.add(stoneMesh);
+    if (stoneMesh != null) {
+        scene.add(stoneMesh);
+    }
     stoneMeshs[x][y] = stoneMesh;
 
     // Play audio when a black or white stone is placed
-    if (stoneKind === "BLACK" || stoneKind === "WHITE") {
-        playStoneAudio();
+    if ((stoneKind === "BLACK" || stoneKind === "WHITE") && is_play_sound && (putStoneAudio != null)) {
+        playAudio(putStoneAudio);
     }
 }
 
-function updateStoneMeshByBoard(x, y, board){
-    updateStoneMesh(x, y, board[x][y]);
+function updateStoneMeshByBoard(x, y, board, is_play_sound){
+    updateStoneMesh(x, y, board[x][y], is_play_sound);
 }
 
 
 // Initialize
 for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
-        updateStoneMesh(i, j, initial_board[i][j]);
+        updateStoneMesh(i, j, initial_board[i][j], false);
     }
 }
 
@@ -80,18 +68,3 @@ const animate = function () {
     renderer.render(scene, camera);
 };
 animate();
-
-
-// Prepare Event Listener
-function onMouseDownEvent(event) {
-    onMouseDownAndTouchStartEvent(event.clientX, event.clientY, socket);
-}
-window.addEventListener('mousedown', onMouseDownEvent, false);
-
-function onTouchStartEvent(event) {
-    const touch = event.touches[0] || event.changedTouches[0];
-    onMouseDownAndTouchStartEvent(touch.clientX, touch.clientY, socket);
-}
-window.addEventListener('touchstart', onTouchStartEvent, false);
-
-window.addEventListener('resize', onResizeEvent(camera, renderer), false);

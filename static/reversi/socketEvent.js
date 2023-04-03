@@ -3,6 +3,22 @@
 // Define socket
 const socket = io();
 
+
+// Prepare Event Listener
+function onMouseDownEvent(event) {
+    onMouseDownAndTouchStartEvent(event.clientX, event.clientY, socket);
+}
+window.addEventListener('mousedown', onMouseDownEvent, false);
+
+function onTouchStartEvent(event) {
+    const touch = event.touches[0] || event.changedTouches[0];
+    onMouseDownAndTouchStartEvent(touch.clientX, touch.clientY, socket);
+}
+window.addEventListener('touchstart', onTouchStartEvent, false);
+
+window.addEventListener('resize', onResizeEvent(camera, renderer), false);
+
+
 // Emmit Connect Event and Disconnect Event
 socket.on('connect', function() {
     socket.emit('reversi_join_room', {room_name: room_name, player_color: this_player_color});
@@ -33,7 +49,7 @@ function gameFinishEvent(black_stone_count, white_stone_count) {
     // Prepare Empty state
     for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
-            updateStoneMesh(i, j, null);
+            updateStoneMesh(i, j, null, false);
         }
     }
     
@@ -42,7 +58,7 @@ function gameFinishEvent(black_stone_count, white_stone_count) {
         setTimeout(function() {
             const x = Math.floor(i / 8);
             const y = i % 8;
-            updateStoneMesh(x, y, "BLACK");
+            updateStoneMesh(x, y, "BLACK", true);
         }, 150*(i+1));
     }
 
@@ -51,7 +67,7 @@ function gameFinishEvent(black_stone_count, white_stone_count) {
         setTimeout(function() {
             const x = Math.floor(i / 8);
             const y = i % 8;
-            updateStoneMesh(7-x, 7-y, "WHITE");
+            updateStoneMesh(7-x, 7-y, "WHITE", true);
         }, 150*(i+1));
     }
 
@@ -96,24 +112,24 @@ socket.on('reversi_update_board', function (data) {
     // Prepare Previous state
     for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
-            updateStoneMeshByBoard(i, j, current_board);
+            updateStoneMeshByBoard(i, j, current_board, false);
         }
     }
     
     // Put Stone
-    updateStoneMeshByBoard(xy_put[0], xy_put[1], next_board);
+    updateStoneMeshByBoard(xy_put[0], xy_put[1], next_board, true);
     
     // Flip stones
     for (let i = 0; i < xy_flips.length; i++) {
         setTimeout(function() {
-            updateStoneMeshByBoard(xy_flips[i][0], xy_flips[i][1], next_board);
+            updateStoneMeshByBoard(xy_flips[i][0], xy_flips[i][1], next_board, true);
         }, 150*(i+1));
     }
     
     // Put Candidate stones
     setTimeout(function() {
         for (let i = 0; i < xy_candidates.length; i++) {
-            updateStoneMeshByBoard(xy_candidates[i][0], xy_candidates[i][1], next_board);
+            updateStoneMeshByBoard(xy_candidates[i][0], xy_candidates[i][1], next_board, true);
         }
 
         if (next_state == "FINISHED") {
