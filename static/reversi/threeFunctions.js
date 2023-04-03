@@ -110,10 +110,7 @@ function generateStone(x, y, stoneKind) {
 
 // Add Click and Touch Event
 function playAudio(audio){
-    if (!audio.paused) {
-        audio.pause();
-    }
-    audio.currentTime = 0;
+    audio.stop();
     audio.play();
 }
 

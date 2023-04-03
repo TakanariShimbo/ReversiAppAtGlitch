@@ -1,6 +1,9 @@
 
 
-const putStoneAudio = new Audio(path_put_stone_sound);
+const putStoneAudio = new Howl({
+    src: [path_put_stone_sound]
+});
+
 
 // Prepare Static instance
 const scene = generateScene();
