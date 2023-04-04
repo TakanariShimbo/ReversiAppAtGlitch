@@ -34,7 +34,7 @@ def create():
     if room_user_manager.is_exists_room(room_name):
         return "この部屋名は既に使用されています。", 400
     
-    game_name = "REVERSI"
+    game_name = request.form['game_name']
     if game_name == "REVERSI":
         return redirect(url_for('riversi', room_name=room_name))     
     

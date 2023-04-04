@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>ルーム作成</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Create Room</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='create/styles.css') }}">
   </head>
   <body>
-    <h1>新しいルームを作成</h1>
+    <h1>Create Room</h1>
     {% if rooms %}
     <ul>
       {% for room in rooms %}
@@ -13,13 +13,17 @@
       {% endfor %}
     </ul>
     {% else %}
-    <p>まだルームが作成されていません。</p>
+    <p>No Room</p>
     {% endif %}
     <form id="create_room_form" method="post">
-        <input type="text" id="room_name" name="room_name" placeholder="部屋名" required>
-        <button type="submit">作成</button>
+        <input type="text" id="room_name" name="room_name" placeholder="Room Name" required>
+        <label for="game_name">Game:</label>
+        <select id="game_name" name="game_name" required>
+          <option value="REVERSI">Reversi</option>
+        </select>
+        <button type="submit">Create</button>
     </form>
-    <button id="return_index">戻る</button>
+    <button id="return_index">Return</button>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script type="text/javascript" charset="utf-8">

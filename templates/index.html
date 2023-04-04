@@ -1,23 +1,29 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>レッツプレイ</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Lets Play</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index/styles.css') }}">
   </head>
   <body>
-    <h1>レッツプレイ</h1>
-    <button id="create_room">部屋を作成</button>
-    <button id="enter_room">部屋に入室</button>
+    <div class="container">
+      <div class="buttons-wrapper" onclick="handleClick(event)">
+        <div class="button create" id="create_room"><span>Create</span></div>
+        <div class="button enter" id="enter_room"><span>Enter</span></div>
+      </div>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script>
-      $('#create_room').on('click', function() {
-        window.location.href = '/create';
-      });
+      function handleClick(event) {
+        const screenWidth = window.innerWidth;
+        const clickPosition = event.clientX;
 
-      $('#enter_room').on('click', function() {
-        window.location.href = '/enter';
-      });
+        if (clickPosition < screenWidth / 2) {
+          window.location.href = '/create';
+        } else {
+          window.location.href = '/enter';
+        }
+      }
     </script>
   </body>
 </html>
